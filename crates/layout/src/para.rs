@@ -1359,6 +1359,17 @@ pub fn layout_para(p: &Paragraph, env: &ParaEnv) -> ParaLayout {
     // Indents in characters are measured in the paragraph mark's font size.
     if rp.indent_chars.iter().any(|c| *c != 0.0) {
         rp.set_char_unit(doc.styles.resolve_char_in(para_style, table_chr, &p.mark).size);
+        // With a character grid, a character-unit indent takes whole grid cells. Measuring it
+        // with the font size instead (16 pt for a 15.79 pt grid) leaves the first line one cell
+        // short, so a 28-cell line holds 25 characters instead of 26 after a 2-cell indent.
+        if let Some(pitch) = env.grid.chars {
+            let [left, right, first] = rp.indent_chars;
+            for (chars, points) in [(left, &mut rp.indent_left), (right, &mut rp.indent_right), (first, &mut rp.indent_first)] {
+                if chars != 0.0 {
+                    *points = (chars * pitch).clamp(-1584.0, 1584.0);
+                }
+            }
+        }
     }
     // List level indents apply unless the paragraph sets its own, or, for a list from the style,
     // the style giving the list (or one based on it) does (`indents_over_list`). A paragraph

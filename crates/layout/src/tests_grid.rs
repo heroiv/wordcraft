@@ -91,3 +91,21 @@ fn character_grid_places_east_asian_text_on_the_pitch() {
         }
     }
 }
+
+#[test]
+fn character_grid_measures_character_indents_on_the_pitch() {
+    let text = "一二三四五六七八九十";
+    let lines = wordcraft_doc::SectionProps { doc_grid: Some(DocGrid { kind: DocGridType::Lines, ..Default::default() }), ..Default::default() };
+    let size = para::Grid::of(&Document::from_text(""), &lines).font_size;
+    let pitch = size + 2.5;
+    let cs = DocGrid::char_space_for(pitch, size);
+    let mut d = with_grid(text, DocGridType::LinesAndChars, cs);
+    for b in d.body.iter_mut() {
+        if let Block::Para(p) = std::sync::Arc::make_mut(b) {
+            p.props.indent_first_chars = Some(2.0);
+        }
+    }
+    let l = lay(&d);
+    let first = l.pages[0].items.iter().find_map(|it| if let Placed::Lines { para, .. } = it { Some(para.clone()) } else { None }).unwrap();
+    assert!((first.rp.indent_first - pitch * 2.0).abs() < 0.01, "indent {} for pitch {pitch}", first.rp.indent_first);
+}
